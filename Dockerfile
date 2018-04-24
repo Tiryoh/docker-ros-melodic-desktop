@@ -7,9 +7,7 @@ RUN apt-get update -q && \
 RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu xenial main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN curl -k https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo apt-key add -
 RUN apt-get update -q && \
-    apt-get install -y ros-kinetic-desktop-full \
-    ros-kinetic-ros-controllers \
-    ros-kinetic-gazebo-ros-control && \
+    apt-get install -y ros-kinetic-desktop-full &&\
     rm -rf /var/lib/apt/lists/*
 RUN rosdep init
 RUN locale-gen en_US.UTF-8
