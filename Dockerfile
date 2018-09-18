@@ -1,6 +1,7 @@
 FROM ubuntu:bionic
 MAINTAINER tiryoh
 
+ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -q && \
     apt-get upgrade -yq && \
     apt-get install -yq wget curl git build-essential vim sudo lsb-release locales bash-completion
