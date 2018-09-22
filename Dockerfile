@@ -25,3 +25,6 @@ RUN mkdir -p ~/catkin_ws/src \
     && /bin/bash -c '. /opt/ros/melodic/setup.bash; cd $HOME/catkin_ws; catkin_make'
 RUN echo 'source /opt/ros/melodic/setup.bash' >> ~/.bashrc \
     && echo 'source ~/catkin_ws/devel/setup.bash' >> ~/.bashrc
+COPY ./ros_entrypoint.sh /
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["/bin/bash"]
