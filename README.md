@@ -18,6 +18,6 @@ $ docker run --rm -it -v ~/repo/ros_ws/<package_name>:/home/ubuntu/catkin_ws/src
 
 ## License
 
-The MIT License
+The Apache V2.0 License
 
 2018 (C) Tiryoh
