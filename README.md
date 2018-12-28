@@ -10,11 +10,19 @@ https://hub.docker.com/r/tiryoh/ros-melodic-desktop/
 
 ## Usage
 
-building ROS package `<package_name>` located in `~/repo/ros_ws/`:
+* move into your ROS package, and just run:
 
-```
-$ docker run --rm -it -v ~/repo/ros_ws/<package_name>:/home/ubuntu/catkin_ws/src/<package_name> tiryoh/ros-melodic-desktop catkin_make
-```
+  ```
+  $ docker run --rm -it -v $(pwd):/ws tiryoh/ros-melodic-desktop catkin_make
+  ```
+
+  * `/ws` directory is simbolic linked to `/home/ubuntu/catkin_ws/src/ws`
+
+* building ROS package `<package_name>` located in `~/workspace/ros/`:
+
+  ```
+  $ docker run --rm -it -v ~/workspace/ros/<package_name>:/home/ubuntu/catkin_ws/src/<package_name> tiryoh/ros-melodic-desktop catkin_make
+  ```
 
 ## License
 
