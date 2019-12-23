@@ -6,5 +6,6 @@ services:
       - docker
 
 script:
-      - docker build -t tiryoh/dev .
+  - docker build -t tiryoh/ros-melodic-desktop:latest ./base
+  - docker build -t tiryoh/ros-melodic-desktop:dev ./devel
 

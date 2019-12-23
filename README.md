@@ -8,6 +8,15 @@
 
 https://hub.docker.com/r/tiryoh/ros-melodic-desktop/
 
+## Docker tags
+
+* base, latest
+  * ros-melodic-desktop installed
+  * [Dockerfile](./base/Dockerfile)
+* dev
+  * base + NOPASSWD
+  * [Dockerfile](./dev/Dockerfile)
+
 ## Usage
 
 * move into your ROS package, and just run:
