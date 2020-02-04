@@ -1,0 +1,92 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "ubuntu/**"
+      - ".github/workflows/**"
+  schedule:
+    - cron: "0 2 * * 0" # Weekly on Sundays at 02:00
+
+env:
+  DOCKER_USERNAME: tiryoh
+  DOCKER_IMAGENAME: ros-melodic-desktop
+  GIT_CONFIG_USER: Tiryoh@GitHubActions
+  GIT_CONFIG_EMAIL: tiryoh@gmail.com
+
+jobs:
+  skip:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "[Skip CI] ${{ contains(github.event.head_commit.message, '[skip ci]') }}"
+
+  build:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.message, '[skip ci]') == false
+    strategy:
+      matrix:
+        target: [base, devel]
+      max-parallel: 1
+
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Build Docker image
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+        run: |
+          cd ${DOCKER_TAGNAME} && docker build -t ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} .
+
+      - name: Rename and Publish Docker images
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        id: docker
+        run: |
+          TIMESTAMP=$(date '+%Y%m%dT%H%M')
+          if [[ "$DOCKER_TAGNAME" == "base" ]]; then IS_LATEST="true"; else IS_LATEST="false"; fi
+          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}
+          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}-${TIMESTAMP}
+
+          if [[ "$DOCKER_TAGNAME" == "devel" ]]; then
+            docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:dev
+          fi
+
+          if [[ "$IS_LATEST" == "true" ]]; then
+          	docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:latest
+          fi
+
+          echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin > /dev/null 2>&1
+          docker image ls "${DOCKER_USERNAME}/*" | tail -n +2 | awk '{print $1":"$2}' | xargs -I{} docker push {}
+
+          echo ::set-output name=timestamp::${TIMESTAMP}
+          echo ::set-output name=digest::$(docker inspect --format='{{index .RepoDigests 0}}' ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}-${TIMESTAMP})
+
+      - name: Update GitHub wiki
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+          DOCKER_SNAPSHOT: ${{ matrix.target }}-${{ steps.docker.outputs.timestamp }}
+          DOCKER_DIGEST_RAW: ${{ steps.docker.outputs.digest }}
+        run: |
+          DOCKER_DIGEST=$(echo ${DOCKER_DIGEST_RAW} | sed -E 's/.*@sha256:(.*)/sha256-\1/g')
+          DOCKER_DIGEST_SHORT=$(echo ${DOCKER_DIGEST} | sed -E 's/.*([0-9a-z]{12})[0-9a-z]{52}$/\1/g')
+          DOCKER_IMAGE_HISTORY_URL=$(echo https://hub.docker.com/layers/${DOCKER_USERNAME}/${DOCKER_IMAGENAME}/${DOCKER_TAGNAME}/images/${DOCKER_DIGEST})
+          DOCKER_SNAPSHOT_IMAGE_HISTORY_URL=$(echo https://hub.docker.com/layers/${DOCKER_USERNAME}/${DOCKER_IMAGENAME}/${DOCKER_SNAPSHOT}/images/${DOCKER_DIGEST})
+          git clone --depth=1 https://${GITHUB_ACTOR}:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.wiki.git wiki
+          cd wiki
+          LINE=$(grep -n "add ${DOCKER_TAGNAME} msg after this line" Home.md | cut -d ":" -f 1)
+          head -n $LINE Home.md > tmp.md
+          echo "* \`${DOCKER_DIGEST_SHORT}\`" | tee -a tmp.md
+          echo "    * uploaded on $(date --iso-8601="minutes")" | tee -a tmp.md
+          echo "        * https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" | tee -a tmp.md
+          echo "    * snapshot" | tee -a tmp.md
+          echo "        * [\`${DOCKER_SNAPSHOT}\`](${DOCKER_SNAPSHOT_IMAGE_HISTORY_URL})" | tee -a tmp.md
+          tail -n +$(( $LINE+1 )) Home.md >> tmp.md
+          mv tmp.md Home.md
+          git config --local user.email "${GIT_CONFIG_EMAIL}"
+          git config --local user.name "${GIT_CONFIG_USER}"
+          git add Home.md
+          git commit -m "Update Home.md"
+          git push origin master

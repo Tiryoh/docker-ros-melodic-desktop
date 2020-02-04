@@ -1,0 +1,73 @@
+name: Build and Test Docker Image
+
+on:
+  pull_request:
+    branches:
+      - master
+    paths:
+      - "ubuntu/**"
+      - ".github/workflows/**"
+  schedule:
+    - cron: "0 2 * * 0" # Weekly on Sundays at 02:00
+
+env:
+  DOCKER_USERNAME: tiryoh
+  DOCKER_IMAGENAME: ros-melodic-desktop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [base, devel]
+    steps:
+      - uses: actions/checkout@master
+
+      - name: Build Docker image
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+        run: |
+          cd ${DOCKER_TAGNAME} && docker build -t ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} .
+
+      - name: Install trivy
+        run: |
+          sudo apt-get install apt-transport-https gnupg
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update
+          sudo apt-get install trivy
+
+      - name: Vulnerability Scan with Trivy
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+        run: |
+          mkdir -p build_log
+          trivy --exit-code 0 --severity HIGH --no-progress ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} | tee ./build_log/trivy_log-HIGH.txt
+          trivy --exit-code 0 --severity CRITICAL --no-progress ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} | tee ./build_log/trivy_log-CRITICAL.txt
+
+      - name: Rename docker images
+        env:
+          DOCKER_TAGNAME: ${{ matrix.target }}
+        run: |
+          TIMESTAMP=$(date '+%Y%m%dT%H%M')
+          if [[ "$DOCKER_TAGNAME" == "base" ]]; then IS_LATEST="true"; else IS_LATEST="false"; fi
+          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}
+          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}-${TIMESTAMP}
+
+          if [[ "$DOCKER_TAGNAME" == "devel" ]]; then
+            docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:dev
+          fi
+
+          if [[ "$IS_LATEST" == "true" ]]; then
+          	docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:latest
+          fi
+
+      - name: List docker images
+        run: |
+          mkdir -p build_log
+          docker image ls "${DOCKER_USERNAME}/*" | tee ./build_log/docker_images.txt
+
+      - uses: actions/upload-artifact@v1
+        with:
+          name: build_log-${{ matrix.target }}
+          path: build_log
