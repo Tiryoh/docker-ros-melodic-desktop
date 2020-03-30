@@ -8,7 +8,7 @@ RUN apt-get update -q && \
 RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN curl -k https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo apt-key add -
 RUN apt-get update -q && \
-    apt-get install -y ros-melodic-desktop-full &&\
+    apt-get install -y ros-melodic-desktop-full python-rosdep &&\
     rm -rf /var/lib/apt/lists/*
 RUN rosdep init
 RUN locale-gen en_US.UTF-8
