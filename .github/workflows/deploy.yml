@@ -5,7 +5,8 @@ on:
     branches:
       - master
     paths:
-      - "ubuntu/**"
+      - "base/**"
+      - "devel/**"
       - ".github/workflows/**"
   schedule:
     - cron: "0 2 * * 0" # Weekly on Sundays at 02:00
