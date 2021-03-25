@@ -1,9 +1,13 @@
-# docker_ros-melodic-desktop
+# docker-ros-melodic-desktop
 
 ![](https://img.shields.io/docker/automated/tiryoh/ros-melodic-desktop.svg)
-![](https://img.shields.io/docker/build/tiryoh/ros-melodic-desktop.svg)
 ![](https://img.shields.io/docker/pulls/tiryoh/ros-melodic-desktop.svg)
 
+
+There are official Docker images provided by OSRF.  
+https://github.com/osrf/docker_images/blob/master/README.md#official-library
+
+This image is developed to force `ubuntu` user (uid=1000, gid=1000) to run the software. If you want to run the software for other users, it is easier to use the official image.
 ## Docker Hub
 
 https://hub.docker.com/r/tiryoh/ros-melodic-desktop/
