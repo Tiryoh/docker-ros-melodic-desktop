@@ -22,53 +22,90 @@ jobs:
       matrix:
         target: [base, devel]
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Build Docker image
-        env:
-          DOCKER_TAGNAME: ${{ matrix.target }}
-        run: |
-          cd ${DOCKER_TAGNAME} && docker build -t ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} .
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v1
 
-      - name: Install trivy
-        run: |
-          sudo apt-get install apt-transport-https gnupg
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -cs) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-          sudo apt-get update
-          sudo apt-get install trivy
+      - name: Setup Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Vulnerability Scan with Trivy
-        env:
-          DOCKER_TAGNAME: ${{ matrix.target }}
-        run: |
-          mkdir -p build_log
-          trivy --exit-code 0 --severity HIGH --no-progress ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} | tee ./build_log/trivy_log-HIGH.txt
-          trivy --exit-code 0 --severity CRITICAL --no-progress ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} | tee ./build_log/trivy_log-CRITICAL.txt
-
-      - name: Rename docker images
-        env:
-          DOCKER_TAGNAME: ${{ matrix.target }}
-        run: |
-          TIMESTAMP=$(date '+%Y%m%dT%H%M')
-          if [[ "$DOCKER_TAGNAME" == "base" ]]; then IS_LATEST="true"; else IS_LATEST="false"; fi
-          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}
-          docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:${DOCKER_TAGNAME}-${TIMESTAMP}
-
-          if [[ "$DOCKER_TAGNAME" == "devel" ]]; then
-            docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:dev
-          fi
-
-          if [[ "$IS_LATEST" == "true" ]]; then
-          	docker tag ${DOCKER_IMAGENAME}:${DOCKER_TAGNAME} ${DOCKER_USERNAME}/${DOCKER_IMAGENAME}:latest
-          fi
-
-      - name: List docker images
-        run: |
-          mkdir -p build_log
-          docker image ls "${DOCKER_USERNAME}/*" | tee ./build_log/docker_images.txt
-
-      - uses: actions/upload-artifact@v1
+      - name: Login to docker.io
+        uses: docker/login-action@v1
         with:
-          name: build_log-${{ matrix.target }}
-          path: build_log
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Prepare Docker metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGENAME }}
+          tags: |
+            type=raw,value=melodic
+          flavor: |
+            latest=false
+            prefix=
+            suffix=
+
+      - name: Build (amd64)
+        id: docker-amd64
+        uses: docker/build-push-action@v2
+        with:
+          context: ${{ matrix.target }}
+          platforms: linux/amd64
+          # outputs: type=registry # same as --push, push: true
+          load: true
+          tags: '${{ steps.meta.outputs.tags }}-amd64'
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      - name: Build (arm64)
+        id: docker-arm64
+        uses: docker/build-push-action@v2
+        with:
+          context: ${{ matrix.target }}
+          platforms: linux/arm64
+          # outputs: type=registry # same as --push, push: true
+          load: true
+          tags: '${{ steps.meta.outputs.tags }}-arm64'
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      - # Temp fix
+        # https://github.com/docker/build-push-action/issues/252
+        # https://github.com/moby/buildkit/issues/1896
+        # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md
+        name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGENAME }}:${{ matrix.target }}-amd64'
+          exit-code: '0'
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: 'trivy-results.sarif'
