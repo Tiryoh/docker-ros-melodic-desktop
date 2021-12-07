@@ -58,8 +58,8 @@ jobs:
           images: |
             ${{ env.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGENAME }}
           tags: |
-            type=raw,value=melodic
-            type=raw,value=melodic-{{date 'YYYYMMDDTHHmm'}}
+            type=raw,value=${{ matrix.target }}
+            type=raw,value=${{ matrix.target }}-{{date 'YYYYMMDDTHHmm'}}
           flavor: |
             latest=true
             prefix=
