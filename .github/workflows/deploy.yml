@@ -88,7 +88,7 @@ jobs:
 
       - name: Update wiki
         env:
-          DOCKER_TAGNAME: melodic
+          DOCKER_TAGNAME: ${{ matrix.target }}
         run: |
           DOCKER_SNAPSHOT=$(cat << EOF | grep ".*-.*T.*" | sed -E "s/.*:(.*-[0-9]*T[0-9])/\1/g"
           ${{ steps.meta.outputs.tags }}
