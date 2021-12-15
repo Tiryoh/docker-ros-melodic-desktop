@@ -59,8 +59,8 @@ fi
 
 echo "Launched container with user: $DEFAULT_USER, uid: $DEFAULT_USER_UID, gid: $DEFAULT_USER_GID"
 
-if [ $# -gt 1 ]; then
-	echo $@ | $EXEC /bin/bash -li
+if which "$1" > /dev/null 2>&1 ; then
+	$EXEC "$@"
 else
-	$EXEC bash -li -c "$@"
+	echo $@ | $EXEC $SHELL -li
 fi
