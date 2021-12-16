@@ -17,14 +17,14 @@ ARG org.opencontainers.image.version
 ARG org.opencontainers.image.revision
 ARG org.opencontainers.image.created
 
-LABEL maintainer=${maintainer}
-LABEL org.opencontainers.image.title=${org.opencontainers.image.title}
-LABEL org.opencontainers.image.description=${org.opencontainers.image.description}
-LABEL org.opencontainers.image.url=${org.opencontainers.image.url}
-LABEL org.opencontainers.image.source=${org.opencontainers.image.source}
-LABEL org.opencontainers.image.version=${org.opencontainers.image.version}
-LABEL org.opencontainers.image.revision=${org.opencontainers.image.version}
-LABEL org.opencontainers.image.created=${org.opencontainers.image.created}
+LABEL maintainer="${maintainer}"
+LABEL org.opencontainers.image.title="${org.opencontainers.image.title}"
+LABEL org.opencontainers.image.description="${org.opencontainers.image.description}"
+LABEL org.opencontainers.image.url="${org.opencontainers.image.url}"
+LABEL org.opencontainers.image.source="${org.opencontainers.image.source}"
+LABEL org.opencontainers.image.version="${org.opencontainers.image.version}"
+LABEL org.opencontainers.image.revision="${org.opencontainers.image.version}"
+LABEL org.opencontainers.image.created="${org.opencontainers.image.created}"
 
 COPY --from=builder /usr/local/bin/su-exec /sbin/
 ENV DEBIAN_FRONTEND=noninteractive
