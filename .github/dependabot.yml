@@ -7,11 +7,8 @@ updates:
       interval: "daily"
 
   - package-ecosystem: "docker"
-    directory: "/base"
-    schedule:
-      interval: "daily"
-
-  - package-ecosystem: "docker"
-    directory: "/devel"
+    directory:
+      - "/base/"
+      - "/devel/"
     schedule:
       interval: "daily"
