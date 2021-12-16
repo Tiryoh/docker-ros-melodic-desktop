@@ -64,6 +64,8 @@ jobs:
             latest=true
             prefix=
             suffix=
+          labels: |
+            maintainer="Daisuke Sato <tiryoh@gmail.com>"
 
       - name: Build and Publish
         id: docker-build

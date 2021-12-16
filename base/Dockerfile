@@ -8,7 +8,23 @@ RUN chown root:root /usr/local/bin/su-exec
 RUN chmod 0755 /usr/local/bin/su-exec
 
 FROM ubuntu:bionic-20210930
-LABEL maintainer="tiryoh@gmail.com"
+ARG maintainer
+ARG org.opencontainers.image.title
+ARG org.opencontainers.image.description
+ARG org.opencontainers.image.url
+ARG org.opencontainers.image.source
+ARG org.opencontainers.image.version
+ARG org.opencontainers.image.revision
+ARG org.opencontainers.image.created
+
+LABEL maintainer=${maintainer}
+LABEL org.opencontainers.image.title=${org.opencontainers.image.title}
+LABEL org.opencontainers.image.description=${org.opencontainers.image.description}
+LABEL org.opencontainers.image.url=${org.opencontainers.image.url}
+LABEL org.opencontainers.image.source=${org.opencontainers.image.source}
+LABEL org.opencontainers.image.version=${org.opencontainers.image.version}
+LABEL org.opencontainers.image.revision=${org.opencontainers.image.version}
+LABEL org.opencontainers.image.created=${org.opencontainers.image.created}
 
 COPY --from=builder /usr/local/bin/su-exec /sbin/
 ENV DEBIAN_FRONTEND=noninteractive
