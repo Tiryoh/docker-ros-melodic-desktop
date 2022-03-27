@@ -11,20 +11,21 @@ FROM ubuntu:bionic-20220315
 LABEL maintainer="tiryoh@gmail.com"
 
 COPY --from=builder /usr/local/bin/su-exec /sbin/
-ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update -q && \
     apt-get upgrade -yq && \
-    apt-get install -yq wget curl git build-essential vim sudo lsb-release locales bash-completion
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends keyboard-configuration language-pack-en && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -yq --no-install-recommends wget curl git build-essential ca-certificates tzdata tmux gnupg2 \
+        vim sudo lsb-release locales bash-completion zsh iproute2 iputils-ping net-tools dnsutils && \
+    rm -rf /var/lib/apt/lists/*
+ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
+RUN locale-gen en_US.UTF-8
 RUN sh -c 'echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/ros-latest.list'
 RUN curl -k https://raw.githubusercontent.com/ros/rosdistro/master/ros.key | sudo apt-key add -
 RUN apt-get update -q && \
-    apt-get install -y ros-melodic-desktop-full python-rosdep &&\
-    apt-get install -y python-rosinstall python-rosinstall-generator python-wstool build-essential python-catkin-tools python3-vcstool &&\
+    apt-get install -y --no-install-recommends ros-melodic-desktop-full python-rosdep &&\
+    apt-get install -y --no-install-recommends python-rosinstall python-rosinstall-generator python-wstool build-essential python-catkin-tools python3-vcstool &&\
     rm -rf /var/lib/apt/lists/*
-RUN rosdep init
-RUN locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
-RUN rosdep update
+RUN rosdep init && rosdep update
 COPY ./ros_entrypoint.sh /
 ENTRYPOINT ["/ros_entrypoint.sh"]
 CMD ["/bin/bash"]
