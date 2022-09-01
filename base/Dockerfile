@@ -1,4 +1,4 @@
-FROM ubuntu:bionic-20220801 AS builder
+FROM ubuntu:bionic-20220829 AS builder
 RUN apt-get update
 RUN apt-get install -y curl
 RUN apt-get install -y --no-install-recommends gcc libc-dev
@@ -7,7 +7,7 @@ RUN gcc -Wall /usr/local/bin/su-exec.c -o/usr/local/bin/su-exec
 RUN chown root:root /usr/local/bin/su-exec
 RUN chmod 0755 /usr/local/bin/su-exec
 
-FROM ubuntu:bionic-20220801
+FROM ubuntu:bionic-20220829
 LABEL maintainer="tiryoh@gmail.com"
 
 COPY --from=builder /usr/local/bin/su-exec /sbin/
